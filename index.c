@@ -11,6 +11,7 @@
 #define NUM_ORGANIZATIONS 2
 #define CURRENT_MANAGEMENT_TEAM_SIZE 1
 #define MANAGEMENT_FEE_PERCENTAGE 10
+#define NUMBER_OF_PRICING_PLANS 4
 
 typedef struct tutor {
     char *name;
@@ -103,8 +104,7 @@ double *grossPayouts(tutor *tutors, int numTutors) {
     return grossPayouts;
 }
 
-bool includes(char **names, char *name) {
-    int numNames = (sizeof(names)/sizeof(names[0]));
+bool includes(char **names, char *name, int numNames) {
     for (int i = 0; i < numNames; i++) {
         if (strcasecmp(names[i], name) == 0){
             return true;
@@ -136,7 +136,7 @@ double managementDividend(tutor *tutors, int numTutors) {
     double *gross = grossPayouts(tutors, numTutors);
     double dividend = 0.0;
     for (int i = 0; i < numTutors; i++) {
-        if (!includes(getManagementTeam(), tutors[i].name)) {
+        if (!includes(getManagementTeam(), tutors[i].name, CURRENT_MANAGEMENT_TEAM_SIZE)) {
             dividend += gross[i] * MANAGEMENT_FEE_PERCENTAGE / 100;
         }
     }
@@ -144,18 +144,53 @@ double managementDividend(tutor *tutors, int numTutors) {
 }
 
 double *netPayouts(tutor *tutors, int numTutors) {
+    int internalCount = 0;
     double *gross = grossPayouts(tutors, numTutors);
     double *net = (double *) malloc (numTutors * sizeof(double));
     double individualManagementDividend = managementDividend(tutors, numTutors) / CURRENT_MANAGEMENT_TEAM_SIZE;
     for (int i = 0; i < numTutors; i++) {
-        if (includes(getManagementTeam(), tutors[i].name)) {
+        if (includes(getManagementTeam(), tutors[i].name, CURRENT_MANAGEMENT_TEAM_SIZE)) {
+            internalCount++;
             net[i] = gross[i] + individualManagementDividend;
         }
         else {
             net[i] = gross[i] * (100 - MANAGEMENT_FEE_PERCENTAGE) / 100;
         }
     }
+    if (internalCount != CURRENT_MANAGEMENT_TEAM_SIZE) {
+        printf("ERROR: Management team size incorrect.\n");
+        printf("\tCheck for proper spelling of tutors' names.\n");
+    }
     return net;
+}
+
+
+static bool isValidPricingPlan(char *plan) {
+    char *plans[NUMBER_OF_PRICING_PLANS] = {"ms", "hsPrep", "hs", "collPrep"};
+    return includes(plans, plan, NUMBER_OF_PRICING_PLANS);
+}
+
+static int planToWeeklyCost(char *plan, bool biweekly) {
+    int cost;
+    if (strcasecmp(plan, "ms") == 0) {
+        cost = 39;
+    }
+    else if (strcasecmp(plan, "hsPrep") == 0) {
+        cost = 49;
+    }
+    else if (strcasecmp(plan, "hs") == 0) {
+        cost = 59;
+    }
+    else if (strcasecmp(plan, "collPrep") == 0) {
+        cost = 79;
+    }
+    else {
+        cost = -1;
+    }
+    if (biweekly) {
+        cost = (cost * 2) - 9;
+    }
+    return cost;
 }
 
 
@@ -177,17 +212,27 @@ void main()
         printf("How many students did %s tutor this cycle? ", tutors[i].name);
         scanf("%d", &tutors[i].numStudents);
         student *students = (struct student *) malloc (tutors[i].numStudents * (sizeof (struct student)));
-        for (int j = 0; j < tutors[i].numStudents; j++){
+        for (int j = 0; j < tutors[i].numStudents; j++) {
+            char *plan = (char *)malloc(sizeof(char) * 15);
             printf("First name of %s student #%d: ", tutors[i].name, j + 1);
             students[j].name = (char *)malloc(NAME_LENGTH * sizeof(char));
             scanf("%s", students[j].name);
-            printf("%s's weekly payment: ", students[j].name);
-            scanf("%d", &students[j].weeklyCost);
+            while (!isValidPricingPlan(plan)) {
+                printf("%s's pricing plan (ms/hsPrep/hs/collPrep): ", students[j].name);
+                scanf("%s", plan);
+            }
             printf("Number of %s's payments processed this cycle: ", students[j].name);
             scanf("%d", &students[j].numPaymentsProcessed);
             printf("Number of %s's hour-long sessions per week: ", students[j].name);
             scanf("%d", &numWeeklySessions);
             students[j].biweekly = (numWeeklySessions == 2);
+            int cost = planToWeeklyCost(plan, students[j].biweekly);
+            if (cost > 0) {
+                students[j].weeklyCost = cost;
+            }
+            else {
+                printf("ERROR: Invalid weekly cost!");
+            }
         }
         tutors[i].students = students;
     }
@@ -213,3 +258,5 @@ void main()
         printf("There has been a math error...");
     }
 }
+
+
