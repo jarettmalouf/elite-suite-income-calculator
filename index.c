@@ -7,11 +7,11 @@
 #define NAME_LENGTH 20
 #define TRANSACTION_FEE_PERCENTAGE 2.9
 #define FEE_PER_CREDIT_CARD .30
-#define PERCENT_DONATION_PER_ORGANIZATION 10
+#define PERCENT_DONATION_PER_ORGANIZATION 2.5
 #define NUM_ORGANIZATIONS 2
 #define CURRENT_MANAGEMENT_TEAM_SIZE 1
 #define MANAGEMENT_FEE_PERCENTAGE 10
-#define NUMBER_OF_PRICING_PLANS 4
+#define NUMBER_OF_PRICING_PLANS 5
 
 typedef struct tutor {
     char *name;
@@ -21,7 +21,7 @@ typedef struct tutor {
 
 typedef struct student {
     char *name;
-    int weeklyCost;
+    double weeklyCost;
     int numPaymentsProcessed;
     bool biweekly;
 } student;
@@ -166,12 +166,12 @@ double *netPayouts(tutor *tutors, int numTutors) {
 
 
 static bool isValidPricingPlan(char *plan) {
-    char *plans[NUMBER_OF_PRICING_PLANS] = {"ms", "hsPrep", "hs", "collPrep"};
+    char *plans[NUMBER_OF_PRICING_PLANS] = {"ms", "hsPrep", "hs", "collPrep", "hsSplit"};
     return includes(plans, plan, NUMBER_OF_PRICING_PLANS);
 }
 
-static int planToWeeklyCost(char *plan, bool biweekly) {
-    int cost;
+static double planToWeeklyCost(char *plan, bool biweekly) {
+    double cost;
     if (strcasecmp(plan, "ms") == 0) {
         cost = 39;
     }
@@ -183,6 +183,9 @@ static int planToWeeklyCost(char *plan, bool biweekly) {
     }
     else if (strcasecmp(plan, "collPrep") == 0) {
         cost = 79;
+    }
+    else if (strcasecmp(plan, "hsSplit") == 0) {
+        cost = 109 / 2;
     }
     else {
         cost = -1;
@@ -226,7 +229,7 @@ void main()
             printf("Number of %s's hour-long sessions per week: ", students[j].name);
             scanf("%d", &numWeeklySessions);
             students[j].biweekly = (numWeeklySessions == 2);
-            int cost = planToWeeklyCost(plan, students[j].biweekly);
+            double cost = planToWeeklyCost(plan, students[j].biweekly);
             if (cost > 0) {
                 students[j].weeklyCost = cost;
             }
@@ -251,12 +254,15 @@ void main()
         char **organizations = getOrganizations();
         printf("DONATIONS:\n");
         for (int i = 0; i < NUM_ORGANIZATIONS; i++) {
-            printf("\t%s: $%.2lf (%d%s donation)\n", organizations[i], donation, PERCENT_DONATION_PER_ORGANIZATION, "%");
+            printf("\t%s: $%.2lf (%.1lf%s donation)\n", organizations[i], donation, PERCENT_DONATION_PER_ORGANIZATION, "%");
         }
     }
     else {
         printf("There has been a math error...");
     }
 }
+
+
+
 
 
